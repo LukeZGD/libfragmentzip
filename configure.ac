@@ -19,7 +19,7 @@ AC_SUBST([VERSION_COMMIT_SHA], ["m4_esyscmd([git rev-parse HEAD | tr -d '\n'])"]
 AC_PROG_CXX
 AC_PROG_CC
 
-CFLAGS+=" -std=c11"
+CFLAGS="$CFLAGS -std=c11"
 
 # Checks the platform.
 AC_MSG_CHECKING([whether to enable WIN32 specific flags])
@@ -35,6 +35,36 @@ case "$host_os" in
   ;;
 esac
 AM_CONDITIONAL(WIN32, test x$win32 = xtrue)
+
+# macOS universal binary support.
+AC_ARG_ENABLE([universal],
+    [AS_HELP_STRING([--enable-universal],
+        [build universal macOS binaries for x86_64 and arm64 (default is no)])],
+    [enable_universal="$enableval"],
+    [enable_universal=no])
+
+universal_build=false
+
+case "$host_os" in
+darwin*)
+    if test "x$enable_universal" = "xyes"; then
+        AC_MSG_NOTICE([enabling macOS universal binary support])
+
+        CFLAGS="$CFLAGS -arch x86_64 -arch arm64"
+        CXXFLAGS="$CXXFLAGS -arch x86_64 -arch arm64"
+        LDFLAGS="$LDFLAGS -arch x86_64 -arch arm64"
+
+        universal_build=true
+    fi
+    ;;
+*)
+    if test "x$enable_universal" = "xyes"; then
+        AC_MSG_ERROR([--enable-universal is only supported on macOS])
+    fi
+    ;;
+esac
+
+AM_CONDITIONAL(UNIVERSAL, test x$universal_build = xtrue)
 
 AC_ARG_ENABLE([debug],
             [AS_HELP_STRING([--enable-debug],
